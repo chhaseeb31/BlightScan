@@ -1,0 +1,55 @@
+name: blightscan
+description: AI-based Tomato Late Blight detection app built with Flutter and Firebase.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  smooth_page_indicator: ^1.1.0
+  image_picker: ^1.0.7
+  go_router: ^13.0.0
+  camera: ^0.12.1
+  shared_preferences: ^2.2.0
+  provider: ^6.1.1
+  firebase_core: ^4.14.0
+  http: ^1.6.0
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/blightscan_logo.png"
+  adaptive_icon_background: "#1FA971"
+  adaptive_icon_foreground: "assets/blightscan_logo.png"
+  web:
+    generate: true
+    image_path: "assets/blightscan_logo.png"
+    background_color: "#FFFFFF"
+    theme_color: "#1FA971"
+  windows:
+    generate: true
+    image_path: "assets/blightscan_logo.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/blightscan_logo.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/blightscan_logo.png
+    - assets/icons/
+    - assets/images/
+    - assets/images/home/
+    - assets/images/onboarding/
