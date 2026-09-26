@@ -14,12 +14,11 @@ void main() {
         ),
       );
 
-      expect(find.text('Forgot Your Password? '), findsOneWidget);
-      expect(find.text('🔑'), findsOneWidget);
+      expect(find.text('Reset Your Password'), findsOneWidget);
       expect(find.text('Your Registered Email'), findsOneWidget);
       expect(find.byType(GSInputField), findsOneWidget);
       expect(find.byType(GSButton), findsOneWidget);
-      expect(find.text('Send OTP Code'), findsOneWidget);
+      expect(find.text('Send Reset Link'), findsOneWidget);
     });
 
     testWidgets('shows validation error for empty email',

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -42,7 +43,9 @@ Future<void> main() async {
     ]).timeout(
       const Duration(seconds: 5),
       onTimeout: () {
-        debugPrint('Initialization timed out, continuing...');
+        if (kDebugMode) {
+          debugPrint('Initialization timed out, continuing...');
+        }
         return [];
       },
     );
@@ -72,7 +75,9 @@ Future<void> main() async {
       ),
     );
   }, (error, stack) {
-    debugPrint('Critical root error: $error\n$stack');
+    if (kDebugMode) {
+      debugPrint('Critical root error: $error\n$stack');
+    }
   });
 }
 
@@ -82,7 +87,9 @@ Future<void> _initializeFirebase() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
+    if (kDebugMode) {
+      debugPrint('Firebase initialization failed: $e');
+    }
   }
 }
 
@@ -102,7 +109,9 @@ Future<void> _initializeSystemSettings() async {
       ),
     );
   } catch (e) {
-    debugPrint('System settings initialization failed: $e');
+    if (kDebugMode) {
+      debugPrint('System settings initialization failed: $e');
+    }
   }
 }
 
@@ -138,19 +147,29 @@ class _BlightScanAppState extends State<BlightScanApp>
     switch (state) {
       case AppLifecycleState.resumed:
         _appStateService.setRestoring(false);
-        debugPrint('App resumed - preserving state');
+        if (kDebugMode) {
+          debugPrint('App resumed - preserving state');
+        }
         break;
       case AppLifecycleState.paused:
-        debugPrint('App paused - state persisted');
+        if (kDebugMode) {
+          debugPrint('App paused - state persisted');
+        }
         break;
       case AppLifecycleState.detached:
-        debugPrint('App detached');
+        if (kDebugMode) {
+          debugPrint('App detached');
+        }
         break;
       case AppLifecycleState.hidden:
-        debugPrint('App hidden');
+        if (kDebugMode) {
+          debugPrint('App hidden');
+        }
         break;
       case AppLifecycleState.inactive:
-        debugPrint('App inactive');
+        if (kDebugMode) {
+          debugPrint('App inactive');
+        }
         break;
     }
   }

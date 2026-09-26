@@ -22,11 +22,13 @@ class MLDiseaseDetectionService {
     if (_isInitialized) return true;
 
     // Real integration point:
-    // 1. Add assets/models/blightscan_model.tflite and labels.txt.
-    // 2. Add tflite_flutter and image preprocessing.
-    // 3. Replace _predictWithFallbackClassifier with interpreter.run(...).
+    // 1. Add the trained model at AppConfig.mlModelAssetPath.
+    // 2. Add labels at AppConfig.mlLabelsAssetPath.
+    // 3. Replace the fallback heuristic with a TFLite interpreter for model input/output matching.
     _isInitialized = true;
-    debugPrint('[ML Service] BlightScan detector initialized.');
+    if (kDebugMode) {
+      debugPrint('[ML Service] BlightScan detector initialized.');
+    }
     return true;
   }
 
@@ -96,9 +98,8 @@ class MLDiseaseDetectionService {
     final diseaseSignal = ((avgRed - avgGreen) / 255.0) + darkRatio;
 
     if (diseaseSignal > 0.37) {
-      final confidence = (0.72 + diseaseSignal.clamp(0.0, 0.22))
-          .clamp(0.60, 0.94)
-          .toDouble();
+      final confidence =
+          (0.72 + diseaseSignal.clamp(0.0, 0.22)).clamp(0.60, 0.94).toDouble();
       return Prediction(label: 'Tomato Late Blight', confidence: confidence);
     }
 
@@ -237,13 +238,11 @@ class ImagePreprocessor {
   static bool isValidImage(Uint8List imageBytes) {
     if (imageBytes.length < 2048) return false;
 
-    final isJpeg =
-        imageBytes.length > 3 &&
+    final isJpeg = imageBytes.length > 3 &&
         imageBytes[0] == 0xFF &&
         imageBytes[1] == 0xD8 &&
         imageBytes[2] == 0xFF;
-    final isPng =
-        imageBytes.length > 8 &&
+    final isPng = imageBytes.length > 8 &&
         imageBytes[0] == 0x89 &&
         imageBytes[1] == 0x50 &&
         imageBytes[2] == 0x4E &&

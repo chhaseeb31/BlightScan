@@ -16,8 +16,13 @@ class AppConfig {
 
   // ML model configuration
   static const String mlModelName = 'blightscan_tomato_late_blight_v1.0';
+  static const String mlModelAssetPath =
+      'assets/models/blightscan_model.tflite';
+  static const String mlLabelsAssetPath = 'assets/models/labels.txt';
+  static const String mlModelOutputClass = 'Tomato Late Blight';
   static const double mlConfidenceThreshold = 0.60;
   static const int mlInputImageSize = 224;
+  static const bool usesFallbackModel = true;
 
   // Feature flags
   static const bool enableOfflineMode = true;

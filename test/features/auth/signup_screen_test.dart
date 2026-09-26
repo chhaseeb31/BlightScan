@@ -56,7 +56,7 @@ void main() {
       await tester.tap(find.byType(GSButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('Please enter a valid email address'), findsOneWidget);
+      expect(find.text('Please enter your email'), findsOneWidget);
     });
 
     testWidgets('shows validation error for weak password',

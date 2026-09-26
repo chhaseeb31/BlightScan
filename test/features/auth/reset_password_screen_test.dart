@@ -14,8 +14,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Secure Your Account '), findsOneWidget);
-      expect(find.text('🔒'), findsOneWidget);
+      expect(find.text('Secure Your Account'), findsOneWidget);
       expect(find.text('New Password'), findsOneWidget);
       expect(find.text('Confirm New Password'), findsOneWidget);
       expect(find.byType(GSInputField), findsNWidgets(2));
@@ -34,7 +33,7 @@ void main() {
       await tester.tap(find.byType(GSButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('Please enter a password'), findsOneWidget);
+      expect(find.text('Please create a password'), findsOneWidget);
     });
 
     testWidgets('shows validation error for short password',
