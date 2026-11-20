@@ -8,7 +8,24 @@ final NotificationService appNotifications =
     NotificationService(authSession: authSession);
 
 class NotificationService extends ChangeNotifier {
-  NotificationService({required this.authSession});
+  NotificationService({required this.authSession}) {
+    authSession.addListener(_onAuthChanged);
+  }
+
+  String? _loadedUid;
+  void _onAuthChanged() {
+    final uid = authSession.currentUser?.uid;
+    if (_loadedUid == uid) return;
+    _loadedUid = uid;
+    _notifications = [];
+    loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    authSession.removeListener(_onAuthChanged);
+    super.dispose();
+  }
 
   final AuthSessionService authSession;
   List<AppNotification> _notifications = [];
@@ -32,51 +49,20 @@ class NotificationService extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_localKey);
+      _notifications = [];
       if (raw != null) {
         final List<dynamic> list = jsonDecode(raw);
         _notifications =
             list.map((item) => AppNotification.fromLocalJson(item)).toList();
         _notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }
-      if (_notifications.isEmpty) {
-        _notifications = _demoNotifications();
-        await _saveToPrefs();
-      }
+      _notifications.removeWhere((item) => item.id.startsWith('demo_'));
     } catch (e) {
       debugPrint('[NotificationService] Load failed: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  List<AppNotification> _demoNotifications() {
-    final now = DateTime.now();
-    return [
-      AppNotification(
-        id: 'demo_treatment_reminder',
-        title: 'Treatment follow-up',
-        message: 'Treatment follow-up is due today.',
-        createdAt: now.subtract(const Duration(hours: 1)),
-        type: NotificationType.treatment,
-      ),
-      AppNotification(
-        id: 'demo_plant_check',
-        title: 'Plant check',
-        message: 'Check the affected leaves for changes.',
-        createdAt: now.subtract(const Duration(days: 1)),
-        type: NotificationType.scan,
-        isRead: true,
-      ),
-      AppNotification(
-        id: 'demo_follow_up_scan',
-        title: 'Follow-up scan',
-        message: 'Consider performing a follow-up scan.',
-        createdAt: now.subtract(const Duration(days: 3)),
-        type: NotificationType.system,
-        isRead: true,
-      ),
-    ];
   }
 
   Future<void> addNotification({
@@ -144,7 +130,9 @@ class NotificationService extends ChangeNotifier {
     required String scanId,
     required Duration delay,
   }) {
+    final uid = authSession.currentUser?.uid;
     Future.delayed(delay, () {
+      if (uid != authSession.currentUser?.uid) return;
       addNotification(
         title: 'Treatment Follow-up',
         message:

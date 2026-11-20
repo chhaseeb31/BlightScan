@@ -35,21 +35,13 @@ Future<void> main() async {
       authSession: authSession,
     );
 
-    await Future.wait([
+    // Paint the splash immediately; navigation waits for auth readiness.
+    unawaited(Future.wait([
       _initializeSystemSettings(),
       _initializeFirebase(),
       AppConfig.initialize(),
-      authSession.initialize(),
-    ]).timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        if (kDebugMode) {
-          debugPrint('Initialization timed out, continuing...');
-        }
-        return [];
-      },
-    );
-    await appNotifications.initialize();
+      authSession.initialize().then((_) => appNotifications.initialize()),
+    ]));
 
     ErrorWidget.builder = (FlutterErrorDetails details) {
       return _GlobalErrorScreen(details: details);

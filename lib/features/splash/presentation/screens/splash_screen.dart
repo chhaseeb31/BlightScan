@@ -18,10 +18,13 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnim;
   late Animation<double> _scaleAnim;
+  bool _animationComplete = false;
+  bool _navigating = false;
 
   @override
   void initState() {
     super.initState();
+    authSession.addListener(_onSessionChanged);
 
     _controller = AnimationController(
       vsync: this,
@@ -39,9 +42,17 @@ class _SplashScreenState extends State<SplashScreen>
     // Navigate after animation completes
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        _navigateToNext();
+        _animationComplete = true;
+        _onSessionChanged();
       }
     });
+  }
+
+  void _onSessionChanged() {
+    if (_animationComplete && authSession.isReady && !_navigating) {
+      _navigating = true;
+      _navigateToNext();
+    }
   }
 
   Future<void> _navigateToNext() async {
@@ -61,6 +72,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    authSession.removeListener(_onSessionChanged);
     _controller.dispose();
     super.dispose();
   }

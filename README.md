@@ -4,7 +4,13 @@
 
 BlightScan is a Flutter + Firebase Final Year Design Project focused on one crop and one disease: **Tomato + Late Blight**. The app lets a user capture or upload a tomato leaf image, runs disease analysis, shows a result with confidence, provides treatment/prevention guidance, and saves scan history for the signed-in user.
 
-> Current AI note: the project structure is ready for TensorFlow Lite integration, but this cleaned codebase does not include a trained `.tflite` model file. A deterministic fallback classifier is included so the app flow, Firebase authentication, Firestore history, UI, and result screens can be tested. Replace the fallback with the trained `assets/models/blightscan_model.tflite` and `assets/models/labels.txt` before final defense/demo.
+> Current AI status: no trained `.tflite` model is bundled. Disease analysis is intentionally blocked with an explicit message until real inference, labels, and preprocessing are integrated. The old fallback must not be treated as a reliable diagnosis.
+
+## Latest update — November 2026
+
+Authentication/session restoration, community permissions, photo upload handling, startup navigation, and camera/gallery lifecycle fixes are included in this update. The community permission fix was verified on a physical vivo phone (HTTP 200).
+
+See [CHANGELOG.md](CHANGELOG.md) for the changes, [READINESS_STATUS.md](READINESS_STATUS.md) for recorded checks and remaining work, and [FIREBASE_RULES.md](FIREBASE_RULES.md) for backend setup. Validation listed there was performed on November 14, 2026; this documentation update does not imply a new device test.
 
 ## Core Scope
 
@@ -18,7 +24,7 @@ BlightScan is a Flutter + Firebase Final Year Design Project focused on one crop
 ## Completed Cleanups
 
 - Updated the user-facing app identity from the previous generic plant scope to **BlightScan**.
-- Removed irrelevant old modules such as community, articles, bookmarks, reminders, notifications, generic disease exploration, and multi-crop UI.
+- Simplified the original multi-crop scope. The current app includes community posts and notifications alongside the tomato scan flow.
 - Rebuilt the main app flow around the actual FYP scope: splash, onboarding, authentication, home dashboard, tomato guide, scan, result, history, profile, settings, help, and about.
 - Replaced hardcoded old sample disease results with Tomato Late Blight / Healthy Tomato Leaf result handling.
 - Added Firestore scan-history service with local cache fallback.

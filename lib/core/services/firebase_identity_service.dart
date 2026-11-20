@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../firebase_options.dart';
@@ -38,12 +39,13 @@ class AuthUser {
 
   factory AuthUser.fromIdentityResponse(
     Map<String, dynamic> data, {
+    String? fallbackUid,
     String? fallbackName,
     String? fallbackEmail,
     String? fallbackRefreshToken,
   }) {
     return AuthUser(
-      uid: _readString(data, ['localId', 'user_id']),
+      uid: _readString(data, ['localId', 'user_id'], fallback: fallbackUid),
       email: _readString(data, ['email'], fallback: fallbackEmail),
       displayName: _readString(
         data,
@@ -76,15 +78,22 @@ class AuthUser {
 
 class AuthException implements Exception {
   final String message;
+  final String code;
+  final String technicalMessage;
 
-  const AuthException(this.message);
+  const AuthException(
+    this.message, {
+    this.code = 'auth/unknown',
+    String? technicalMessage,
+  }) : technicalMessage = technicalMessage ?? message;
 
   @override
   String toString() => message;
 }
 
 class FirebaseIdentityService {
-  FirebaseIdentityService({http.Client? client}) : _client = client ?? http.Client();
+  FirebaseIdentityService({http.Client? client})
+      : _client = client ?? http.Client();
 
   final http.Client _client;
 
@@ -106,6 +115,7 @@ class FirebaseIdentityService {
     required String email,
     required String password,
   }) async {
+    debugPrint('[AUTH_TRACE] requesting fresh Firebase ID token');
     final data = await _postJson(
       _identityUri('accounts:signInWithPassword'),
       {
@@ -114,7 +124,7 @@ class FirebaseIdentityService {
         'returnSecureToken': true,
       },
     );
-    return AuthUser.fromIdentityResponse(data);
+    return _validatedUser(AuthUser.fromIdentityResponse(data), 'sign-in');
   }
 
   Future<AuthUser> createAccount({
@@ -122,6 +132,8 @@ class FirebaseIdentityService {
     required String email,
     required String password,
   }) async {
+    debugPrint('[AUTH_TRACE] signup started');
+    debugPrint('[AUTH_TRACE] requesting fresh Firebase ID token');
     final data = await _postJson(
       _identityUri('accounts:signUp'),
       {
@@ -130,10 +142,11 @@ class FirebaseIdentityService {
         'returnSecureToken': true,
       },
     );
+    debugPrint('[AUTH_TRACE] Firebase Identity Toolkit signup completed');
 
-    final createdUser = AuthUser.fromIdentityResponse(
-      data,
-      fallbackName: displayName.trim(),
+    final createdUser = await _validatedUser(
+      AuthUser.fromIdentityResponse(data, fallbackName: displayName.trim()),
+      'signup',
     );
 
     if (displayName.trim().isEmpty) {
@@ -159,38 +172,45 @@ class FirebaseIdentityService {
       },
     );
 
-    return AuthUser.fromIdentityResponse(
-      data,
-      fallbackName: displayName.trim(),
-      fallbackEmail: user.email,
-      fallbackRefreshToken: user.refreshToken,
+    return _validatedUser(
+      AuthUser.fromIdentityResponse(
+        data,
+        fallbackUid: user.uid,
+        fallbackName: displayName.trim(),
+        fallbackEmail: user.email,
+        fallbackRefreshToken: user.refreshToken,
+      ),
+      'display-name update',
     );
   }
 
   Future<AuthUser> refreshSession({
     required String refreshToken,
+    String? fallbackUid,
     String? fallbackName,
     String? fallbackEmail,
   }) async {
-    final response = await _client
-        .post(
-          _refreshUri,
-          headers: const {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: {
-            'grant_type': 'refresh_token',
-            'refresh_token': refreshToken,
-          },
-        )
-        .timeout(const Duration(seconds: 20));
+    final response = await _client.post(
+      _refreshUri,
+      headers: const {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+      },
+    ).timeout(const Duration(seconds: 20));
 
     final data = _decodeResponse(response);
-    return AuthUser.fromIdentityResponse(
-      data,
-      fallbackName: fallbackName,
-      fallbackEmail: fallbackEmail,
-      fallbackRefreshToken: refreshToken,
+    return _validatedUser(
+      AuthUser.fromIdentityResponse(
+        data,
+        fallbackUid: fallbackUid,
+        fallbackName: fallbackName,
+        fallbackEmail: fallbackEmail,
+        fallbackRefreshToken: refreshToken,
+      ),
+      'session refresh',
     );
   }
 
@@ -217,12 +237,86 @@ class FirebaseIdentityService {
       },
     );
 
-    return AuthUser.fromIdentityResponse(
+    return _validatedUser(
+      AuthUser.fromIdentityResponse(
+        data,
+        fallbackUid: user.uid,
+        fallbackName: user.displayName,
+        fallbackEmail: user.email,
+        fallbackRefreshToken: user.refreshToken,
+      ),
+      'password update',
+    );
+  }
+
+  Future<AuthUser> _validatedUser(AuthUser user, String operation) async {
+    final hasUid = user.uid.isNotEmpty;
+    if (!hasUid) {
+      debugPrint('[AUTH_TRACE] $operation UID available = false');
+      throw AuthException(
+        'Firebase Authentication returned an incomplete account.',
+        code: 'auth/empty-uid',
+        technicalMessage: '$operation response did not contain a UID',
+      );
+    }
+
+    if (user.idToken.isEmpty && user.refreshToken.isNotEmpty) {
+      debugPrint(
+        '[AUTH_TRACE] ID token missing from $operation response; requesting fresh token from Secure Token API',
+      );
+      user = await _refreshIdToken(user, operation);
+    }
+
+    final hasIdToken = user.idToken.isNotEmpty;
+    debugPrint('[AUTH_TRACE] $operation auth response UID available = $hasUid');
+    debugPrint('[AUTH_TRACE] $operation ID token acquired = $hasIdToken');
+    debugPrint(
+        '[AUTH_TRACE] $operation ID token length = ${user.idToken.length}');
+
+    if (!hasIdToken) {
+      throw AuthException(
+        'Firebase Authentication did not provide an ID token.',
+        code: 'auth/empty-id-token',
+        technicalMessage:
+            '$operation response has uid=$hasUid and idToken=false',
+      );
+    }
+    return user;
+  }
+
+  Future<AuthUser> _refreshIdToken(AuthUser user, String operation) async {
+    final response = await _client.post(
+      _refreshUri,
+      headers: const {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'grant_type': 'refresh_token',
+        'refresh_token': user.refreshToken,
+      },
+    ).timeout(const Duration(seconds: 20));
+    final data = _decodeResponse(response);
+    final refreshedUser = AuthUser.fromIdentityResponse(
       data,
+      fallbackUid: user.uid,
       fallbackName: user.displayName,
       fallbackEmail: user.email,
       fallbackRefreshToken: user.refreshToken,
     );
+
+    if (refreshedUser.uid != user.uid || refreshedUser.idToken.isEmpty) {
+      throw AuthException(
+        'Firebase Authentication could not refresh the ID token.',
+        code: 'auth/token-refresh-incomplete',
+        technicalMessage:
+            '$operation token refresh UID matches=${refreshedUser.uid == user.uid}; ID token acquired=${refreshedUser.idToken.isNotEmpty}',
+      );
+    }
+    debugPrint('[AUTH_TRACE] fresh Firebase ID token acquired = true');
+    debugPrint(
+      '[AUTH_TRACE] fresh Firebase ID token length = ${refreshedUser.idToken.length}',
+    );
+    return refreshedUser;
   }
 
   Future<Map<String, dynamic>> _postJson(
@@ -238,12 +332,22 @@ class FirebaseIdentityService {
           )
           .timeout(const Duration(seconds: 20));
       return _decodeResponse(response);
-    } on TimeoutException {
-      throw const AuthException('Request timed out. Please try again.');
+    } on TimeoutException catch (error, stackTrace) {
+      _logRequestFailure(error, stackTrace);
+      throw AuthException(
+        'Request timed out. Please try again.',
+        code: 'network/timeout',
+        technicalMessage: error.toString(),
+      );
     } on AuthException {
       rethrow;
-    } catch (_) {
-      throw const AuthException('Network error. Please check your connection.');
+    } catch (error, stackTrace) {
+      _logRequestFailure(error, stackTrace);
+      throw AuthException(
+        'Network error. Please check your connection.',
+        code: 'network/error',
+        technicalMessage: error.toString(),
+      );
     }
   }
 
@@ -258,7 +362,18 @@ class FirebaseIdentityService {
     final message = error is Map<String, dynamic>
         ? error['message'] as String? ?? 'AUTH_ERROR'
         : 'AUTH_ERROR';
-    throw AuthException(_friendlyMessage(message));
+    throw AuthException(
+      _friendlyMessage(message),
+      code: error is Map<String, dynamic>
+          ? error['status']?.toString() ?? message
+          : message,
+      technicalMessage: message,
+    );
+  }
+
+  void _logRequestFailure(Object error, StackTrace stackTrace) {
+    debugPrint('[AUTH_TRACE] Identity Toolkit request failed: $error');
+    debugPrint(stackTrace.toString());
   }
 
   String _friendlyMessage(String code) {

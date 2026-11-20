@@ -257,7 +257,11 @@ class ProfileScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              final navigator = Navigator.of(context, rootNavigator: true);
+              if (navigator.canPop()) {
+                navigator.pop();
+              }
+
               await context.read<AuthSessionService>().signOut();
               if (context.mounted) {
                 context.go(AppRoutes.login);

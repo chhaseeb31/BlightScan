@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -452,18 +454,57 @@ class _EmptyCommunity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.people_outline_rounded, size: 64, color: AppColors.border),
-          SizedBox(height: 16),
-          Text('No community posts yet',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          SizedBox(height: 8),
-          Text('Be the first to share your tomato progress!',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppColors.primarySurface,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                Icons.people_alt_outlined,
+                size: 42,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No community posts yet',
+              style: AppTextStyles.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Be the first to share your tomatoes and growing updates.',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () {
+                final service = context.read<CommunityService>();
+                final navigator = Navigator.of(context);
+                unawaited(
+                  navigator.pushNamed(AppRoutes.createPost).then((result) {
+                    if (result == true) {
+                      service.loadPosts();
+                    }
+                  }),
+                );
+              },
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Create post'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -483,13 +524,35 @@ class _CommunityError extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.cloud_off_outlined,
-                size: 56, color: AppColors.textTertiary),
-            const SizedBox(height: 16),
-            Text(message,
-                textAlign: TextAlign.center, style: AppTextStyles.bodyMedium),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
+            Container(
+              width: 92,
+              height: 92,
+              decoration: BoxDecoration(
+                color: AppColors.primarySurface,
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 48,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Community temporarily unavailable',
+              style: AppTextStyles.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Retry'),

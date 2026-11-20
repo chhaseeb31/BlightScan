@@ -168,10 +168,9 @@ class _ScanScreenContentState extends State<_ScanScreenContent> {
       return QualityReviewSheet(
         controller: controller,
         onStartAnalysis: () async {
-          final ok = await controller.prepareForAnalysis();
-          if (!ok || !context.mounted) return;
-
           try {
+            final ok = await controller.prepareForAnalysis();
+            if (!ok || !context.mounted) return;
             final result = await controller.startAnalysis();
             if (result != null && context.mounted) {
               context.pushReplacement(AppRoutes.result, extra: result);

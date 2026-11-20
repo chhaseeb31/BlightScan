@@ -4,6 +4,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 import '../services/ml_disease_detection_service.dart';
+import '../config/app_config.dart';
 
 class PlantDiseaseRepository {
   static PlantDiseaseRepository? _instance;
@@ -27,6 +28,13 @@ class PlantDiseaseRepository {
 
   /// Analyze a tomato leaf image for Late Blight
   Future<DiseaseAnalysisResult> analyzeImage(Uint8List imageBytes) async {
+    // Compressed-image byte heuristics are not a trained diagnosis model.
+    // Fail explicitly until real inference and its class mapping are installed.
+    if (AppConfig.usesFallbackModel) {
+      return DiseaseAnalysisResult.failure(
+        'Disease detection is not available yet: the trained model has not been installed. No diagnosis was made.',
+      );
+    }
     try {
       if (!_initialized) {
         await initialize();

@@ -49,6 +49,7 @@ class ScanController extends ChangeNotifier with WidgetsBindingObserver {
   bool _disposed = false;
   bool _isInitializing = false;
   bool _analysisInProgress = false;
+  bool _pickingImage = false;
   int _operationId = 0;
 
   void _notify() {
@@ -116,12 +117,15 @@ class ScanController extends ChangeNotifier with WidgetsBindingObserver {
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
-        _operationId++;
+        // The native gallery temporarily backgrounds this screen. Its result
+        // still belongs to the current operation when the picker returns.
+        if (!_pickingImage) _operationId++;
         _disposeCameraForLifecycle();
         break;
       case AppLifecycleState.resumed:
         if (!_isInitialized &&
             !_isInitializing &&
+            !_pickingImage &&
             _currentState == ScanUIState.idle) {
           initializeCamera();
         }
@@ -187,6 +191,7 @@ class ScanController extends ChangeNotifier with WidgetsBindingObserver {
     if (_disposed || _isBusy) return;
     final operationId = ++_operationId;
     _isBusy = true;
+    _pickingImage = true;
     _notify();
     await HapticFeedback.lightImpact();
 
@@ -201,7 +206,11 @@ class ScanController extends ChangeNotifier with WidgetsBindingObserver {
 
       await _classifyImageQuality(pickedFile.path, operationId);
     } finally {
+      _pickingImage = false;
       _isBusy = false;
+      if (!_disposed && _currentState == ScanUIState.idle) {
+        unawaited(initializeCamera());
+      }
       _notify();
     }
   }
@@ -218,6 +227,7 @@ class ScanController extends ChangeNotifier with WidgetsBindingObserver {
     _analysisProgress = 0.0;
     _statusMessage = 'Preparing image...';
     _statusSubtitle = 'Preparing a precise diagnosis for your leaf';
+    if (!_isInitialized) unawaited(initializeCamera());
     _notify();
   }
 

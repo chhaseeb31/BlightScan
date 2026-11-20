@@ -17,13 +17,24 @@ class ScanHistoryService extends ChangeNotifier {
   ScanHistoryService({
     required this.authSession,
     required this.repository,
-  });
+  }) {
+    authSession.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (_lastLoadedUid != _currentUid) clearInMemory();
+  }
+
+  @override
+  void dispose() {
+    authSession.removeListener(_onAuthChanged);
+    super.dispose();
+  }
 
   List<ScanHistoryRecord> get scans => List.unmodifiable(_scans);
   bool get isLoading => _isLoading;
 
   String get _currentUid => authSession.currentUser?.uid ?? 'guest';
-  String? get _token => authSession.currentUser?.idToken;
 
   Future<void> loadScans() {
     final activeLoad = _loadFuture;
@@ -44,7 +55,9 @@ class ScanHistoryService extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      final records = await repository.getScans(userId: uid, token: _token);
+      final records = await repository.getScans(
+          userId: uid, token: await authSession.getValidIdToken());
+      if (uid != _currentUid) return;
       _scans.clear();
       _scans.addAll(records);
       notifyListeners();
@@ -73,7 +86,9 @@ class ScanHistoryService extends ChangeNotifier {
     notifyListeners();
 
     await repository.saveScan(
-        userId: _currentUid, record: record, token: _token);
+        userId: _currentUid,
+        record: record,
+        token: await authSession.getValidIdToken());
     return record;
   }
 
@@ -81,7 +96,9 @@ class ScanHistoryService extends ChangeNotifier {
     _scans.removeWhere((e) => e.id == scanId);
     notifyListeners();
     await repository.deleteScan(
-        userId: _currentUid, scanId: scanId, token: _token);
+        userId: _currentUid,
+        scanId: scanId,
+        token: await authSession.getValidIdToken());
   }
 
   void _setLoading(bool value) {

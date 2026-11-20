@@ -25,13 +25,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _pickImage() async {
     final image =
         await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
-    if (image != null) {
+    if (image != null && mounted) {
       setState(() => _selectedImage = File(image.path));
     }
   }
 
   Future<void> _submit() async {
-    if (_captionController.text.trim().isEmpty) {
+    if (_isSubmitting) return;
+    final caption = _captionController.text.trim();
+    if (caption.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please add a caption')),
       );
@@ -40,12 +42,30 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     setState(() => _isSubmitting = true);
 
-    final List<String> imageUrls = [];
+    final service = context.read<CommunityService>();
+    final imageUrls = <String>[];
 
-    final success = await context.read<CommunityService>().createPost(
-          caption: _captionController.text.trim(),
-          imageUrls: imageUrls,
-        );
+    if (_selectedImage != null) {
+      final uploadedUrl = await service.uploadPostImage(_selectedImage!);
+      if (uploadedUrl == null) {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(service.uploadError ??
+                  'Image upload failed. Please try again.'),
+            ),
+          );
+        }
+        return;
+      }
+      imageUrls.add(uploadedUrl);
+    }
+
+    final success = await service.createPost(
+      caption: caption,
+      imageUrls: imageUrls,
+    );
 
     if (mounted) {
       setState(() => _isSubmitting = false);
@@ -54,10 +74,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Failed to create post. Please try again.')),
+            content: Text('Failed to create post. Please try again.'),
+          ),
         );
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _captionController.dispose();
+    super.dispose();
   }
 
   @override
@@ -97,6 +124,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   child: TextField(
                     controller: _captionController,
                     maxLines: null,
+                    maxLength: 5000,
                     decoration: const InputDecoration(
                       hintText: 'What\'s happening with your tomatoes?',
                       border: InputBorder.none,
