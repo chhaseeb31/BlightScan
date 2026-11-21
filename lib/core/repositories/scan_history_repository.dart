@@ -19,33 +19,46 @@ class ScanHistoryRepository {
     if (token != null && token.isNotEmpty && userId != 'guest') {
       try {
         final remoteScans = await remoteDataSource.fetchScans(userId, token);
-        await localDataSource.saveScans(userId, remoteScans);
-        return remoteScans;
+        final pending =
+            (await localDataSource.getScans(userId)).where((r) => !r.synced);
+        final combined = <String, ScanHistoryRecord>{
+          for (final r in remoteScans) r.id: r,
+          for (final r in pending) r.id: r
+        }.values.toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        await localDataSource.saveScans(userId, combined);
+        return combined;
       } catch (e) {
         // Fallback to local on remote error
         return localDataSource.getScans(userId);
       }
     }
-    
+
     return localDataSource.getScans(userId);
   }
 
-  Future<void> saveScan({
+  Future<bool> saveScan({
     required String userId,
     required ScanHistoryRecord record,
     String? token,
   }) async {
     // Save local first for instant UI response
     await localDataSource.saveScan(userId, record);
-    
+
     // Then try remote if possible
     if (token != null && token.isNotEmpty && userId != 'guest') {
       try {
         await remoteDataSource.saveScan(record, token);
+        await localDataSource.saveScan(
+            userId,
+            ScanHistoryRecord.fromLocalJson(
+                {...record.toLocalJson(), 'synced': true}));
+        return true;
       } catch (e) {
         // Log or handle background sync later
       }
     }
+    return false;
   }
 
   Future<void> deleteScan({
@@ -53,13 +66,11 @@ class ScanHistoryRepository {
     required String scanId,
     String? token,
   }) async {
-    await localDataSource.deleteScan(userId, scanId);
     if (token != null && token.isNotEmpty && userId != 'guest') {
-      try {
-        await remoteDataSource.deleteScan(userId, scanId, token);
-      } catch (e) {
-        // Handle error
-      }
+      await remoteDataSource.deleteScan(userId, scanId, token);
+    } else {
+      throw StateError('Connect and sign in to delete this scan.');
     }
+    await localDataSource.deleteScan(userId, scanId);
   }
 }

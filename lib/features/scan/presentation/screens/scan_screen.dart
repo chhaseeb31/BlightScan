@@ -173,6 +173,11 @@ class _ScanScreenContentState extends State<_ScanScreenContent> {
             if (!ok || !context.mounted) return;
             final result = await controller.startAnalysis();
             if (result != null && context.mounted) {
+              final warning = controller.historyService.lastSaveError;
+              if (warning != null) {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(warning)));
+              }
               context.pushReplacement(AppRoutes.result, extra: result);
             }
           } catch (e) {

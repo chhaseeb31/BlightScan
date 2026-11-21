@@ -143,6 +143,38 @@ class FirebaseUserProfileService {
     }
   }
 
+  Uri _photoUri(String uid) => Uri.https('firestore.googleapis.com',
+      '/v1/projects/${AppConfig.firebaseProjectId}/databases/(default)/documents/users/$uid');
+
+  Future<String?> fetchPhotoUrl(AuthUser user) async {
+    final response = await _client
+        .get(_photoUri(user.uid), headers: _headers(user.idToken))
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode == 404) return null;
+    if (response.statusCode != 200)
+      throw _firestoreError('Profile read failed', response);
+    return jsonDecode(response.body)['fields']?['photoUrl']?['stringValue']
+        as String?;
+  }
+
+  Future<void> updatePhotoUrl(AuthUser user, String url) async {
+    final response = await _client
+        .patch(
+          _photoUri(user.uid)
+              .replace(queryParameters: {'updateMask.fieldPaths': 'photoUrl'}),
+          headers: _headers(user.idToken),
+          body: jsonEncode({
+            'fields': {
+              'photoUrl': {'stringValue': url}
+            }
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _firestoreError('Profile photo save failed', response);
+    }
+  }
+
   Future<void> upsertUser(AuthUser user) async {
     final ok = await ensureUserProfile(user);
     if (!ok) {

@@ -74,6 +74,29 @@ class AuthSessionService extends ChangeNotifier {
     }
   }
 
+  String? _photoUrl;
+  String? get photoUrl => _photoUrl;
+
+  Future<void> loadProfilePhoto() async {
+    final uid = _currentUser?.uid;
+    final token = await getValidIdToken();
+    if (uid == null || token == null || _currentUser?.uid != uid) return;
+    final url = await _userProfileService.fetchPhotoUrl(_currentUser!);
+    if (_currentUser?.uid != uid) return;
+    _photoUrl = url;
+    notifyListeners();
+  }
+
+  Future<void> saveProfilePhoto(String uid, String url) async {
+    final token = await getValidIdToken();
+    if (token == null || _currentUser?.uid != uid)
+      throw StateError('Please sign in again.');
+    await _userProfileService.updatePhotoUrl(_currentUser!, url);
+    if (_currentUser?.uid != uid) return;
+    _photoUrl = url;
+    notifyListeners();
+  }
+
   bool get isReady => _isReady;
   bool get isSignedIn => _currentUser != null;
   AuthUser? get currentUser => _currentUser;
@@ -244,6 +267,7 @@ class AuthSessionService extends ChangeNotifier {
 
   Future<void> signOut({bool notify = true}) async {
     _currentUser = null;
+    _photoUrl = null;
     _rememberMe = false;
     _tokenAcquiredAt = null;
     await _clearPersistedUser();

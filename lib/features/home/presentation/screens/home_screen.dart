@@ -412,7 +412,10 @@ class _LastScanTile extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: _HistoryImage(path: record.imagePath),
+            child: _HistoryImage(
+                path: record.imageUrl.isNotEmpty
+                    ? record.imageUrl
+                    : record.imagePath),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -462,6 +465,14 @@ class _HistoryImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (Uri.tryParse(path)?.scheme == 'https') {
+      return Image.network(path,
+          width: 64,
+          height: 64,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox(
+              width: 64, height: 64, child: Icon(Icons.broken_image_outlined)));
+    }
     final file = File(path);
     if (path.isNotEmpty && file.existsSync()) {
       final cacheSize = (64 * MediaQuery.devicePixelRatioOf(context)).round();

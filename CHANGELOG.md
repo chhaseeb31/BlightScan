@@ -1,5 +1,40 @@
 # Changelog
 
+## November 21, 2026 — Community refresh and Cloudinary image persistence
+
+### Community experience
+- Redesign the community feed with clearer post cards, a composer entry point, search, and Latest, Most liked, My posts, and With photos filters.
+- Use the existing BlightScan color palette throughout the redesigned screen.
+- Cover compact-screen layout, search, and feed filters with a widget regression test.
+
+### Cloudinary and Firestore
+- Add a shared unsigned multipart Cloudinary uploader with secure URL validation, timeout handling, and failure results.
+- Upload leaf photos after successful classification and save the image URL, prediction, confidence, treatment steps, user ID, and server-generated timestamp to the top-level scan_history collection.
+- Preserve legacy history reads and retain pending scans and durable local photos for retry after upload or sync failures.
+- Display network images and saved treatment plans in History, with network image support in Home, Result, and Treatment screens.
+- Add editable profile avatars that save Cloudinary photo URLs to the user's Firestore document without overwriting other profile fields.
+- Surface history deletion failures and deploy owner-only scan_history rules.
+- Document the storage flow, changed files, and verification limits in CLOUDINARY_INTEGRATION.md.
+
+### Dependencies and verification
+- Update Flutter metadata and the dependency lockfile, adopt the material_ui entry-point import, and add path_provider as a direct dependency for persistent scan photos. The http package was already available.
+- Add regression coverage for Cloudinary multipart uploads and failures, Firestore history fields and user filters, and profile picture persistence.
+- November 21 pre-push checks: all 98 tests passed; Flutter analysis completed with no errors or warnings and 59 informational lint/deprecation notices; staged whitespace checks passed.
+- Android system Back changes and their regression coverage are detailed in the November 20 entry below.
+
+### Remaining verification
+- Confirm a live Cloudinary upload on a device; automated upload checks use mocked HTTP responses.
+- Integrate the trained AI model before validating real leaf classification. Fallback diagnoses remain disabled.
+- Community post photos still use their existing Firebase Storage flow; the Cloudinary change covers scan and profile images.
+
+## November 20, 2026 — Android system Back
+
+- Handle Android Back at shell tab roots through BackButtonListener because go_router 13 skips the root PopScope callback.
+- Community, History, and Profile return to Home and save Home as the restoration destination. Back from Home retains normal Android exit behavior.
+- Pushed scan/detail routes and dialogs are handled by the router before tab fallback. Background/resume preserves the current tab.
+- Four navigation regression tests pass, covering tab roots, Home exit dispatch, saved restoration destination, nested details, scan, dialogs, and background/resume. Physical device verification is pending because no phone was connected.
+
+
 ## November 2026 — authentication, community, and scan reliability
 
 ### Authentication and startup

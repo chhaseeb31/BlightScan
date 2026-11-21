@@ -9,6 +9,20 @@ service cloud.firestore {
         allow read, write: if owner(userId);
       }
     }
+    match /scan_history/{scanId} {
+      allow read: if owner(resource.data.userId);
+      allow create: if owner(request.resource.data.userId)
+        && request.resource.data.imageUrl is string
+        && request.resource.data.prediction is string
+        && request.resource.data.confidence is number
+        && request.resource.data.treatmentPlan is list
+        && request.resource.data.timestamp == request.time;
+      allow update: if owner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if signedIn() && (
+        !exists(/databases/$(database)/documents/scan_history/$(scanId))
+        || owner(resource.data.userId));
+    }
     match /posts/{postId} {
 
       // Authenticated users can read posts.

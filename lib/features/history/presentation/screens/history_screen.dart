@@ -42,7 +42,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _delete(ScanHistoryRecord record) async {
-    await context.read<ScanHistoryService>().deleteScan(record.id);
+    try {
+      await context.read<ScanHistoryService>().deleteScan(record.id);
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Could not delete this scan. Check your connection and try again.')));
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Scan deleted.')),
@@ -268,7 +276,9 @@ class _HistoryTile extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     child: _HistoryImage(
-                      path: item.imagePath,
+                      path: item.imageUrl.isNotEmpty
+                          ? item.imageUrl
+                          : item.imagePath,
                       statusColor: statusColor,
                     ),
                   ),
@@ -300,6 +310,17 @@ class _HistoryTile extends StatelessWidget {
                             color: AppColors.textSecondary,
                           ),
                         ),
+                        if (!item.synced)
+                          const Text('Saved locally · refresh to sync',
+                              style: TextStyle(
+                                  color: AppColors.warning, fontSize: 11)),
+                        if (item.treatmentPlan.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text('Treatment plan',
+                              style: AppTextStyles.titleSmall),
+                          Text(item.treatmentPlan.join('\n'),
+                              style: AppTextStyles.bodySmall),
+                        ],
                         const SizedBox(height: 4),
                         Text(
                           _formatTime(item.createdAt),
@@ -349,6 +370,14 @@ class _HistoryImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (Uri.tryParse(path)?.scheme == 'https') {
+      return Image.network(path,
+          width: 72,
+          height: 72,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox(
+              width: 72, height: 72, child: Icon(Icons.broken_image_outlined)));
+    }
     final file = File(path);
     if (path.isNotEmpty && file.existsSync()) {
       final cacheSize = (72 * MediaQuery.devicePixelRatioOf(context)).round();

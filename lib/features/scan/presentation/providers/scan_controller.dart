@@ -350,7 +350,7 @@ class ScanController extends ChangeNotifier with WidgetsBindingObserver {
       }
       if (!_isActive(operationId)) return null;
       _completeProgressSimulation();
-      await historyService.saveScan(result);
+      await historyService.saveScan(result, treatmentPlan: details.treatment);
       if (!_isActive(operationId)) return null;
       return result;
     } catch (e) {

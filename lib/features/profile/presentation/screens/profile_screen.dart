@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/profile_photo_avatar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -72,12 +73,7 @@ class ProfileScreen extends StatelessWidget {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const CircleAvatar(
-                      radius: 50,
-                      backgroundColor: AppColors.primarySurface,
-                      child: Icon(Icons.person,
-                          size: 50, color: AppColors.primary),
-                    ),
+                    child: const ProfilePhotoAvatar(radius: 50),
                   ),
                 ],
               ),
@@ -303,11 +299,7 @@ class MyProfileScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            const CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.primarySurface,
-              child: Icon(Icons.person, size: 48, color: AppColors.primary),
-            ),
+            const ProfilePhotoAvatar(radius: 48),
             const SizedBox(height: 28),
             _ProfileField(label: 'Full Name', value: profile.displayName),
             const SizedBox(height: 16),

@@ -84,6 +84,13 @@ class _TreatmentPlanScreenState extends State<TreatmentPlanScreen>
       {double? width, double? height, BoxFit fit = BoxFit.cover}) {
     final sr = widget.scanResult;
     if (sr != null && sr.hasImage) {
+      if (Uri.tryParse(sr.imagePath)?.scheme == 'https') {
+        return Image.network(sr.imagePath,
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: (_, __, ___) => _placeholder(width, height));
+      }
       final file = File(sr.imagePath);
       if (file.existsSync()) {
         final mediaQuery = MediaQuery.of(context);

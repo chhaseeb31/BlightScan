@@ -2,6 +2,9 @@ import '../../../scan/domain/models/scan_result.dart';
 
 /// Firestore/local-storage representation of a saved BlightScan diagnosis.
 class ScanHistoryRecord {
+  final String imageUrl;
+  final List<String> treatmentPlan;
+  final bool synced;
   final String id;
   final String userId;
   final String imagePath;
@@ -14,6 +17,9 @@ class ScanHistoryRecord {
   final DateTime createdAt;
 
   const ScanHistoryRecord({
+    this.imageUrl = '',
+    this.treatmentPlan = const [],
+    this.synced = true,
     required this.id,
     required this.userId,
     required this.imagePath,
@@ -30,7 +36,7 @@ class ScanHistoryRecord {
 
   ScanResult toScanResult() {
     return ScanResult(
-      imagePath: imagePath,
+      imagePath: imageUrl.isNotEmpty ? imageUrl : imagePath,
       diseaseName: diseaseName,
       cropName: cropName,
       confidenceScore: confidenceScore,
@@ -42,6 +48,9 @@ class ScanHistoryRecord {
 
   Map<String, dynamic> toLocalJson() {
     return {
+      'imageUrl': imageUrl,
+      'treatmentPlan': treatmentPlan,
+      'synced': synced,
       'id': id,
       'userId': userId,
       'imagePath': imagePath,
@@ -57,6 +66,10 @@ class ScanHistoryRecord {
 
   factory ScanHistoryRecord.fromLocalJson(Map<String, dynamic> json) {
     return ScanHistoryRecord(
+      imageUrl: json['imageUrl'] as String? ?? '',
+      treatmentPlan:
+          (json['treatmentPlan'] as List? ?? []).whereType<String>().toList(),
+      synced: json['synced'] as bool? ?? true,
       id: json['id'] as String? ?? '',
       userId: json['userId'] as String? ?? '',
       imagePath: json['imagePath'] as String? ?? '',
@@ -66,9 +79,9 @@ class ScanHistoryRecord {
       severity: json['severity'] as String? ?? 'unknown',
       status: json['status'] as String? ?? 'unknown',
       description: json['description'] as String? ?? '',
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '')
-              ?.toLocal() ??
-          DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '')?.toLocal() ??
+              DateTime.now(),
     );
   }
 

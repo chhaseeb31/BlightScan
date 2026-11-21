@@ -60,12 +60,24 @@ class MainScreen extends StatelessWidget {
           navigationShell.goBranch(0, initialLocation: true);
         }
       },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: navigationShell,
-        bottomNavigationBar: _GSBottomNavBar(
-          currentIndex: navigationShell.currentIndex,
-          onTap: (index) => _onTabTapped(context, index),
+      child: BackButtonListener(
+        // go_router 13 skips maybePop at tab roots, so PopScope alone never
+        // receives Android Back there. Handle that root case at the dispatcher.
+        onBackButtonPressed: () async {
+          // Let the router dismiss dialogs and pushed detail/scan routes first.
+          if (GoRouter.of(context).canPop()) return false;
+          if (navigationShell.currentIndex == 0) return false;
+          AppStateService().saveRouteState(AppRoutes.main);
+          navigationShell.goBranch(0, initialLocation: true);
+          return true;
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          body: navigationShell,
+          bottomNavigationBar: _GSBottomNavBar(
+            currentIndex: navigationShell.currentIndex,
+            onTap: (index) => _onTabTapped(context, index),
+          ),
         ),
       ),
     );

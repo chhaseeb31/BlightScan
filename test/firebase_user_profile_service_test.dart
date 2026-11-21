@@ -15,6 +15,26 @@ void main() {
     refreshToken: 'refresh-token',
   );
 
+  test('profile picture patch preserves other profile fields and reads URL',
+      () async {
+    final service =
+        FirebaseUserProfileService(client: MockClient((request) async {
+      expect(request.url.path, endsWith('/users/firebase-uid'));
+      if (request.method == 'PATCH') {
+        expect(
+            request.url.queryParameters['updateMask.fieldPaths'], 'photoUrl');
+        expect(jsonDecode(request.body)['fields'].keys.toList(), ['photoUrl']);
+        return http.Response('{}', 200);
+      }
+      return http.Response(
+          '{"fields":{"photoUrl":{"stringValue":"https://example.com/avatar.jpg"}}}',
+          200);
+    }));
+    await service.updatePhotoUrl(user, 'https://example.com/avatar.jpg');
+    expect(await service.fetchPhotoUrl(user), 'https://example.com/avatar.jpg');
+    service.dispose();
+  });
+
   test('creates and verifies a missing user profile at the canonical UID path',
       () async {
     final requests = <http.Request>[];
